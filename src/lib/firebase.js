@@ -17,5 +17,5 @@ const { FieldValue } = Firebase.firestore
 
 // console.log('firebase', firebase)
 // seedDatabase(firebase)
-
+// debugger
 export { firebase, FieldValue }

@@ -1,33 +1,55 @@
 import React, { useState, useContext, useEffect } from 'react'
 import { useHistory, Link } from 'react-router-dom'
+// import { create } from 'eslint/lib/rules/*'
 import FirebaseContext from '../context/firebase'
 import * as ROUTES from '../constants/routes'
+import { doesUsernameExist } from '../services/firebase'
 
-export default function Login() {
+export default function SignUp() {
   // eslint-disable-next-line prettier/prettier
   const history = useHistory()
   const { firebase } = useContext(FirebaseContext)
-
+  const [username, setUsername] = useState('')
+  const [fullname, setFullName] = useState('')
   const [emailAddress, setEmailAddress] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const isInvalid = password === '' || emailAddress === ''
+  useEffect(() => {
+    document.title = 'Signup - Instagram'
+  }, [])
 
-  const handleLogin = async (e) => {
+  const handleSignUp = async (e) => {
     e.preventDefault()
-    try {
-      await firebase.auth().signInWithEmailAndPassword(emailAddress, password)
-      history.push(ROUTES.DASHBOARD)
-    } catch (errorReturned) {
-      setEmailAddress('')
-      setPassword('')
-      setError(errorReturned.message)
+    const usernameExists = await doesUsernameExist(username)
+    if (usernameExists.length === 0) {
+      try {
+        const createdUserResult = await firebase
+          .auth()
+          .createUserWithEmailAndPassword(emailAddress, password)
+        await createdUserResult.user.updateProfile({
+          displayName: username
+        })
+        await firebase.firestore().collection('users').add({
+          userId: createdUserResult.user.uid,
+          username: username.toLowerCase(),
+          fullname,
+          emailAddress: emailAddress.toLowerCase(),
+          following: [],
+          dateCreated: Date.now()
+        })
+
+        history.push(ROUTES.DASHBOARD)
+      } catch (errorResult) {
+        setFullName('')
+        setEmailAddress('')
+        setPassword('')
+        setError(errorResult.message)
+      }
+    } else {
+      setError('That username is already taken - please try another')
     }
   }
-
-  useEffect(() => {
-    document.title = 'Login - Instagram'
-  }, [])
 
   return (
     <div className="container flex mx-auto max-w-screen-md items-center h-screen">
@@ -40,13 +62,30 @@ export default function Login() {
             <img src="/images/logo.png" alt="insta logo" className="mt-2 w-6/12 mb-4" />
           </h1>
           {error && <p className="mb-4 text-xs text-red-primary">{error}</p>}
-          <form onSubmit={handleLogin} method="POST">
+          <form onSubmit={handleSignUp} method="POST">
+            <input
+              aria-label="Enter your username"
+              type="text"
+              placeholder="Username"
+              className="text-sm text-gray-base w-full mr-5 py-5 px-4 h-2 border border-gray-primary rounded mb-2"
+              onChange={({ target }) => setUsername(target.value)}
+              value={username}
+            />
+            <input
+              aria-label="Enter your full name"
+              type="text"
+              placeholder="Full Name"
+              className="text-sm text-gray-base w-full mr-5 py-5 px-4 h-2 border border-gray-primary rounded mb-2"
+              onChange={({ target }) => setFullName(target.value)}
+              value={fullname}
+            />
             <input
               aria-label="Enter your email address"
               type="text"
               placeholder="Email address"
               className="text-sm text-gray-base w-full mr-5 py-5 px-4 h-2 border border-gray-primary rounded mb-2"
               onChange={({ target }) => setEmailAddress(target.value)}
+              value={emailAddress}
             />
             <input
               aria-label="Enter your password"
@@ -54,6 +93,7 @@ export default function Login() {
               placeholder="Password"
               className="text-sm text-gray-base w-full mr-5 py-5 px-4 h-2 border border-gray-primary rounded mb-2"
               onChange={({ target }) => setPassword(target.value)}
+              value={password}
             />
             <button
               disabled={isInvalid}
@@ -62,16 +102,16 @@ export default function Login() {
                 isInvalid && 'opacity-50'
               }`}
             >
-              Log In
+              Sign Up
             </button>
           </form>
         </div>
         <div className="flex justify-center items-center flex-col w-full bg-white p-4 rounded border border-gray-primary">
           <p className="text-sm">
-            Don&apos;t have an account?{`  `}
-            <Link to={ROUTES.SIGN_UP} className="font-bold text-blue-medium">
+            Have an account?{`  `}
+            <Link to={ROUTES.LOGIN} className="font-bold text-blue-medium">
               {' '}
-              Sign up{' '}
+              Log In{' '}
             </Link>
           </p>
         </div>
